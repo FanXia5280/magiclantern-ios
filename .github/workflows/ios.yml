@@ -8,7 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    # macos-15 自带 Xcode 16，能读 XcodeGen 生成的新版工程格式
+    runs-on: macos-15
     timeout-minutes: 40
 
     steps:
@@ -17,6 +18,12 @@ jobs:
 
       - name: 安装 XcodeGen
         run: brew install xcodegen
+
+      - name: 显示构建环境（排错用）
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          xcodegen --version
 
       - name: 生成 Xcode 工程
         run: xcodegen generate
