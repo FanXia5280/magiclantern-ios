@@ -91,7 +91,7 @@ final class SceneViewController: UIViewController, BleListener {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "场景模式"
+        navigationItem.title = "场景模式"
         applyGlassBackground()
         BleController.shared.addListener(self)
 

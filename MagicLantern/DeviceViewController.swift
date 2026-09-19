@@ -10,7 +10,7 @@ final class DeviceViewController: UIViewController, BleListener, UITableViewData
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "设备管理"
+        navigationItem.title = "设备管理"
         applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()

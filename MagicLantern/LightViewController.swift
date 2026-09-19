@@ -22,7 +22,7 @@ final class LightViewController: UIViewController, BleListener {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "灯光控制"
+        navigationItem.title = "灯光控制"
         applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()

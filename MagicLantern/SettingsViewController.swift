@@ -1,11 +1,13 @@
 import UIKit
+import PhotosUI
 
-/// 设置页：点数 / 线序 / 自动连接 / 设备过滤 / 关于
+/// 设置页：点数 / 线序 / 自动连接 / 设备过滤 / 自定义背景 / 关于
 final class SettingsViewController: UIViewController, BleListener {
 
     private let countValue = Ui.label("", size: 13, color: Theme.textSecondary)
     private let seqValue = Ui.label("", size: 13, color: Theme.textSecondary)
     private let btValue = Ui.label("", size: 13, color: Theme.textSecondary)
+    private let bgValue = Ui.label("", size: 13, color: Theme.textSecondary)
     private let autoSwitch = UISwitch()
     private let filterSwitch = UISwitch()
 
@@ -13,7 +15,7 @@ final class SettingsViewController: UIViewController, BleListener {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "设置"
+        navigationItem.title = "设置"
         applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()
@@ -76,6 +78,10 @@ final class SettingsViewController: UIViewController, BleListener {
         filterSwitch.addTarget(self, action: #selector(filterChanged), for: .valueChanged)
         inner1.addArrangedSubview(switchRow(title: "仅显示灯具设备", sub: "只列出 MELK- 开头的设备",
                                             sw: filterSwitch))
+        inner1.addArrangedSubview(divider())
+        inner1.addArrangedSubview(row(title: "自定义背景", sub: bgValue, action: { [weak self] in
+            self?.showBackgroundOptions()
+        }))
         root.addArrangedSubview(card1)
 
         // ---- 设备管理 ----
@@ -248,6 +254,7 @@ final class SettingsViewController: UIViewController, BleListener {
         countValue.text = "\(Prefs.shared.ledCount) 点"
         seqValue.text = seqNames[max(0, min(seqNames.count - 1, Prefs.shared.pinSequence))]
         btValue.text = BleController.shared.connectionSummary
+        bgValue.text = BackgroundManager.shared.isCustom ? "自定义图片" : "默认"
         if autoSwitch.isOn != Prefs.shared.autoConnect {
             autoSwitch.isOn = Prefs.shared.autoConnect
         }
@@ -261,4 +268,70 @@ final class SettingsViewController: UIViewController, BleListener {
     func bleDevicesChanged() { refresh() }
     func bleStateChanged(_ device: BleDevice?) { refresh() }
     func bleMessage(_ text: String) { refresh() }
+
+    // ---------------- 自定义背景 ----------------
+
+    private func showBackgroundOptions() {
+        let sheet = UIAlertController(title: "自定义背景",
+                                      message: "选一张图片作为 App 背景，玻璃卡片会浮在图片上",
+                                      preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "从相册选择图片", style: .default) { [weak self] _ in
+            self?.pickBackground()
+        })
+        if BackgroundManager.shared.isCustom {
+            sheet.addAction(UIAlertAction(title: "恢复默认背景", style: .destructive) { [weak self] _ in
+                BackgroundManager.shared.clear()
+                self?.refreshAllBackgrounds()
+                self?.refresh()
+                Ui.toast("已恢复默认背景")
+            })
+        }
+        sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
+        if let pop = sheet.popoverPresentationController {
+            pop.sourceView = view
+            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+        }
+        present(sheet, animated: true)
+    }
+
+    private func pickBackground() {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    /// 把新背景应用到所有页面
+    private func refreshAllBackgrounds() {
+        guard let tab = tabBarController else { return }
+        for root in tab.viewControllers ?? [] {
+            if let nav = root as? UINavigationController {
+                for vc in nav.viewControllers {
+                    vc.applyGlassBackground()
+                }
+            } else {
+                root.applyGlassBackground()
+            }
+        }
+        tab.view.setNeedsLayout()
+    }
+}
+
+extension SettingsViewController: PHPickerViewControllerDelegate {
+
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard let result = results.first else { return }
+        result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] obj, _ in
+            guard let image = obj as? UIImage else { return }
+            DispatchQueue.main.async {
+                BackgroundManager.shared.save(image)
+                self?.refreshAllBackgrounds()
+                self?.refresh()
+                Ui.toast("背景已设置")
+            }
+        }
+    }
 }

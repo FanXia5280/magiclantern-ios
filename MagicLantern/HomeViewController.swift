@@ -12,7 +12,8 @@ final class HomeViewController: UIViewController, BleListener {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "氛围灯控制"
+        // 只设导航栏标题；不要用 title = ...（会同步覆盖底部栏文字）
+        navigationItem.title = "氛围灯控制"
         applyGlassBackground()
         BleController.shared.addListener(self)
         BleController.shared.start()

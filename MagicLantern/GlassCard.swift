@@ -48,11 +48,95 @@ final class GlassCard: UIView {
     }
 }
 
+/// 自定义背景图管理（存在沙盒里，重启依然有效）
+final class BackgroundManager {
+
+    static let shared = BackgroundManager()
+
+    private let fileURL: URL = {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("custom_background.jpg")
+    }()
+
+    private var cached: UIImage?
+
+    var isCustom: Bool {
+        return FileManager.default.fileExists(atPath: fileURL.path)
+    }
+
+    var image: UIImage? {
+        if let c = cached { return c }
+        cached = UIImage(contentsOfFile: fileURL.path)
+        return cached
+    }
+
+    func save(_ img: UIImage) {
+        // 压到合理尺寸，避免内存爆掉
+        let resized = BackgroundManager.resize(img, maxSide: 1600)
+        if let data = resized.jpegData(compressionQuality: 0.88) {
+            try? data.write(to: fileURL)
+        }
+        cached = resized
+    }
+
+    func clear() {
+        try? FileManager.default.removeItem(at: fileURL)
+        cached = nil
+    }
+
+    private static func resize(_ img: UIImage, maxSide: CGFloat) -> UIImage {
+        let w = img.size.width
+        let h = img.size.height
+        let maxCurrent = max(w, h)
+        if maxCurrent <= maxSide { return img }
+        let scale = maxSide / maxCurrent
+        let newSize = CGSize(width: w * scale, height: h * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            img.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+}
+
 extension UIViewController {
 
-    /// 纯色背景（自动跟随浅色 / 深色模式）
+    private var bgImageTag: Int { return 99001 }
+    private var bgDimTag: Int { return 99002 }
+
+    /// 页面背景：优先用用户自定义图片，否则用跟随深浅模式的纯色
     func applyGlassBackground() {
-        view.backgroundColor = Theme.bg
+        // 清理旧背景（支持反复调用）
+        view.viewWithTag(bgImageTag)?.removeFromSuperview()
+        view.viewWithTag(bgDimTag)?.removeFromSuperview()
+
+        guard let img = BackgroundManager.shared.image else {
+            view.backgroundColor = Theme.bg
+            return
+        }
+
+        view.backgroundColor = .black
+
+        let iv = UIImageView(image: img)
+        iv.tag = bgImageTag
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.isUserInteractionEnabled = false
+        iv.frame = view.bounds
+        iv.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.insertSubview(iv, at: 0)
+
+        // 一层自适应遮罩，保证玻璃卡片上的文字依然清晰
+        let dim = UIView()
+        dim.tag = bgDimTag
+        dim.isUserInteractionEnabled = false
+        dim.backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 0, alpha: 0.45)
+                : UIColor(white: 1, alpha: 0.30)
+        }
+        dim.frame = view.bounds
+        dim.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.insertSubview(dim, at: 1)
     }
 }
 
