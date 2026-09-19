@@ -192,7 +192,13 @@ final class SceneViewController: UIViewController, BleListener {
             guard let b = v as? UIButton else { continue }
             let sel = b.tag == current
             b.setTitleColor(sel ? .white : Theme.textSecondary, for: .normal)
-            Glass.styleChip(b, selected: sel)
+            if sel {
+                // 选中：液态玻璃胶囊
+                Glass.styleChip(b, selected: true)
+            } else {
+                // 未选中：去掉底色，只留文字（更干净）
+                Glass.removeGlassBackground(b)
+            }
         }
     }
 

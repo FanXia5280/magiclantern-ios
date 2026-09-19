@@ -6,7 +6,7 @@ import UIKit
 final class MainTabController: UITabBarController {
 
     private let settingsButton = UIButton(type: .system)
-    private let fabSize: CGFloat = 58
+    private let fabSize: CGFloat = 54
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -40,9 +40,9 @@ final class MainTabController: UITabBarController {
         return item
     }
 
-    /// 圆形液态玻璃悬浮按钮（设置）
+    /// 圆形液态玻璃按钮（设置）：与底部导航栏并排，位于其右侧
     private func setupSettingsButton() {
-        let config = UIImage.SymbolConfiguration(pointSize: 23, weight: .semibold)
+        let config = UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
         settingsButton.setImage(UIImage(systemName: "gearshape.fill", withConfiguration: config),
                                 for: .normal)
         settingsButton.tintColor = Theme.textPrimary
@@ -54,9 +54,9 @@ final class MainTabController: UITabBarController {
             settingsButton.widthAnchor.constraint(equalToConstant: fabSize),
             settingsButton.heightAnchor.constraint(equalToConstant: fabSize),
             settingsButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor,
-                                                     constant: -20),
-            settingsButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor,
-                                                   constant: -92)
+                                                     constant: -14),
+            // 与底栏同一水平线（像系统"照片"App 那样）
+            settingsButton.centerYAnchor.constraint(equalTo: tabBar.centerYAnchor)
         ])
         settingsButton.addTarget(self, action: #selector(openSettings), for: .touchUpInside)
     }

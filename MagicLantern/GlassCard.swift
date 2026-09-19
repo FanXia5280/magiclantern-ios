@@ -112,4 +112,10 @@ enum Glass {
         addGlassBackground(v, radius: radius, interactive: true,
                            tint: selected ? Theme.accent : nil)
     }
+
+    /// 移除玻璃背景（未选中态只留文字，避免一堆灰底显得零碎）
+    static func removeGlassBackground(_ v: UIView) {
+        v.viewWithTag(glassTag)?.removeFromSuperview()
+        v.backgroundColor = .clear
+    }
 }
