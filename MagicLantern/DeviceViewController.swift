@@ -11,7 +11,7 @@ final class DeviceViewController: UIViewController, BleListener, UITableViewData
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "设备管理"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()
         refreshUi()

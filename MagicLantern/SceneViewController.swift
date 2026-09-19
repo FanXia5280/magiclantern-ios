@@ -13,10 +13,11 @@ final class GradientCell: UIView {
     init(colors: [Int], text: String) {
         self.colors = colors.isEmpty ? [0x222222, 0x444444] : colors
         super.init(frame: .zero)
-        layer.cornerRadius = 12
+        layer.cornerRadius = 16
+        layer.cornerCurve = .continuous
         layer.masksToBounds = true
         layer.borderWidth = 1
-        layer.borderColor = UIColor(white: 1, alpha: 0.2).cgColor
+        layer.borderColor = UIColor(white: 1, alpha: 0.28).cgColor
 
         gradient.startPoint = CGPoint(x: 0, y: 0.5)
         gradient.endPoint = CGPoint(x: 1, y: 0.5)
@@ -59,9 +60,9 @@ final class GradientCell: UIView {
     }
 
     func setSelectedStyle(_ selected: Bool) {
-        layer.borderWidth = selected ? 3 : 1
+        layer.borderWidth = selected ? 2.5 : 1
         layer.borderColor = selected ? UIColor.white.cgColor
-            : UIColor(white: 1, alpha: 0.2).cgColor
+            : UIColor(white: 1, alpha: 0.28).cgColor
     }
 
     @objc private func tapped() { onTap?() }
@@ -91,7 +92,7 @@ final class SceneViewController: UIViewController, BleListener {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "场景模式"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
         BleController.shared.addListener(self)
 
         categories = ["自定义", "双色流动"] + ModeData.groups
@@ -191,9 +192,11 @@ final class SceneViewController: UIViewController, BleListener {
             guard let b = v as? UIButton else { continue }
             let sel = b.tag == current
             b.setTitleColor(sel ? Theme.accentText : Theme.textSecondary, for: .normal)
-            b.backgroundColor = sel ? UIColor(argb: 0x332F6BFF) : UIColor(white: 1, alpha: 0.06)
-            b.layer.borderWidth = sel ? 1 : 0
-            b.layer.borderColor = Theme.accentText.cgColor
+            b.backgroundColor = sel ? UIColor(argb: 0x552F6BFF) : UIColor(white: 1, alpha: 0.10)
+            b.layer.cornerCurve = .continuous
+            b.layer.borderWidth = 1
+            b.layer.borderColor = sel ? UIColor(argb: 0xFF6E8CFF).cgColor
+                : UIColor(white: 1, alpha: 0.14).cgColor
         }
     }
 
@@ -265,8 +268,7 @@ final class SceneViewController: UIViewController, BleListener {
             b.titleLabel?.font = UIFont.systemFont(ofSize: 13)
             b.titleLabel?.numberOfLines = 2
             b.setTitleColor(Theme.textPrimary, for: .normal)
-            b.backgroundColor = Theme.cardInner
-            b.layer.cornerRadius = 12
+            Glass.styleTile(b)
             b.translatesAutoresizingMaskIntoConstraints = false
             b.heightAnchor.constraint(equalToConstant: 52).isActive = true
             b.action = { [weak self] in
@@ -286,10 +288,7 @@ final class SceneViewController: UIViewController, BleListener {
 
     private func highlightMode(_ index: Int) {
         for (i, b) in modeButtons.enumerated() {
-            let sel = i == index
-            b.backgroundColor = sel ? UIColor(argb: 0x332F6BFF) : Theme.cardInner
-            b.layer.borderWidth = sel ? 1 : 0
-            b.layer.borderColor = Theme.accent.cgColor
+            Glass.styleTile(b, selected: i == index)
         }
     }
 
@@ -359,10 +358,11 @@ final class SceneViewController: UIViewController, BleListener {
         add.setTitle("+ 新建渐变", for: .normal)
         add.titleLabel?.font = UIFont.boldSystemFont(ofSize: 14)
         add.setTitleColor(Theme.accentText, for: .normal)
-        add.backgroundColor = UIColor(argb: 0x1A4A6CF7)
-        add.layer.cornerRadius = 12
+        add.backgroundColor = UIColor(argb: 0x2A4A6CF7)
+        add.layer.cornerRadius = 16
+        add.layer.cornerCurve = .continuous
         add.layer.borderWidth = 1
-        add.layer.borderColor = UIColor(argb: 0x884A6CF7).cgColor
+        add.layer.borderColor = UIColor(argb: 0xAA6E8CFF).cgColor
         add.translatesAutoresizingMaskIntoConstraints = false
         add.heightAnchor.constraint(equalToConstant: 52).isActive = true
         add.action = { [weak self] in

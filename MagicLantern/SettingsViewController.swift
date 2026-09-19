@@ -14,7 +14,7 @@ final class SettingsViewController: UIViewController, BleListener {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "设置"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()
         refresh()

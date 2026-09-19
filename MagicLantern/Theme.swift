@@ -75,20 +75,15 @@ enum Ui {
         return s
     }
 
+    /// 液态玻璃卡片（半透明磨砂 + 高光）
     static func card() -> UIView {
-        let v = UIView()
-        v.backgroundColor = Theme.card
-        v.layer.cornerRadius = Theme.radius
-        v.layer.borderWidth = 1
-        v.layer.borderColor = UIColor(white: 1.0, alpha: 0.06).cgColor
-        return v
+        let c = GlassCard(radius: 22, strong: true)
+        c.showShine(true)
+        return c
     }
 
-    static func applyCardStyle(_ v: UIView, radius: CGFloat = Theme.radius) {
-        v.backgroundColor = Theme.card
-        v.layer.cornerRadius = radius
-        v.layer.borderWidth = 1
-        v.layer.borderColor = UIColor(white: 1.0, alpha: 0.06).cgColor
+    static func applyCardStyle(_ v: UIView, radius: CGFloat = 22) {
+        Glass.styleTile(v, selected: false, radius: radius)
     }
 
     /// 圆形渐变图标（用纯色圆代替渐变色，风格一致）

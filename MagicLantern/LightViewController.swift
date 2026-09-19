@@ -23,7 +23,7 @@ final class LightViewController: UIViewController, BleListener {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "灯光控制"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
         BleController.shared.addListener(self)
         setupUi()
         loadState()
@@ -52,9 +52,8 @@ final class LightViewController: UIViewController, BleListener {
         ])
 
         // ---- 颜色预览 ----
-        let previewCard = UIView()
-        previewCard.backgroundColor = Theme.cardInner
-        previewCard.layer.cornerRadius = 12
+        let previewCard = GlassCard(radius: 16, strong: true)
+        previewCard.showShine(true)
         previewCard.translatesAutoresizingMaskIntoConstraints = false
         previewCard.heightAnchor.constraint(equalToConstant: 56).isActive = true
         preview.translatesAutoresizingMaskIntoConstraints = false
@@ -155,9 +154,10 @@ final class LightViewController: UIViewController, BleListener {
                 if idx >= colors.count { break }
                 let sw = UIView()
                 sw.backgroundColor = UIColor(rgb: colors[idx])
-                sw.layer.cornerRadius = 8
+                sw.layer.cornerRadius = 10
+                sw.layer.cornerCurve = .continuous
                 sw.layer.borderWidth = 1
-                sw.layer.borderColor = UIColor(white: 1, alpha: 0.15).cgColor
+                sw.layer.borderColor = UIColor(white: 1, alpha: 0.28).cgColor
                 sw.translatesAutoresizingMaskIntoConstraints = false
                 sw.heightAnchor.constraint(equalToConstant: 34).isActive = true
                 sw.tag = custom ? idx : -1
@@ -320,9 +320,8 @@ final class LightViewController: UIViewController, BleListener {
         let b = UIButton(type: .system)
         b.setTitle(title, for: .normal)
         b.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
-        b.setTitleColor(primary ? .white : Theme.textSecondary, for: .normal)
-        b.backgroundColor = primary ? Theme.accent : UIColor(white: 1, alpha: 0.06)
-        b.layer.cornerRadius = 12
+        b.setTitleColor(primary ? .white : Theme.textPrimary, for: .normal)
+        Glass.styleButton(b, accent: primary)
         b.translatesAutoresizingMaskIntoConstraints = false
         b.heightAnchor.constraint(equalToConstant: 44).isActive = true
         return b

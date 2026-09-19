@@ -25,7 +25,7 @@ final class GradientEditorViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = origin == nil ? "新建渐变" : "编辑渐变"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
 
         if let g = origin {
             c1 = g.color1

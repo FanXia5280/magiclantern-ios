@@ -13,7 +13,7 @@ final class HomeViewController: UIViewController, BleListener {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "氛围灯控制"
-        view.backgroundColor = Theme.bg
+        applyGlassBackground()
         BleController.shared.addListener(self)
         BleController.shared.start()
         setupUi()
@@ -76,8 +76,7 @@ final class HomeViewController: UIViewController, BleListener {
         powerButton.setTitle("开灯", for: .normal)
         powerButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
         powerButton.setTitleColor(.white, for: .normal)
-        powerButton.backgroundColor = Theme.accent
-        powerButton.layer.cornerRadius = 12
+        Glass.styleButton(powerButton, radius: 14, accent: true)
         powerButton.translatesAutoresizingMaskIntoConstraints = false
         powerButton.widthAnchor.constraint(equalToConstant: 92).isActive = true
         powerButton.heightAnchor.constraint(equalToConstant: 42).isActive = true
@@ -88,8 +87,7 @@ final class HomeViewController: UIViewController, BleListener {
         connectButton.setTitle("搜索并连接灯具", for: .normal)
         connectButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
         connectButton.setTitleColor(Theme.textPrimary, for: .normal)
-        connectButton.backgroundColor = UIColor(white: 1, alpha: 0.06)
-        connectButton.layer.cornerRadius = 12
+        Glass.styleButton(connectButton)
         connectButton.translatesAutoresizingMaskIntoConstraints = false
         connectButton.heightAnchor.constraint(equalToConstant: 46).isActive = true
         connectButton.addTarget(self, action: #selector(openDevices), for: .touchUpInside)
@@ -151,8 +149,12 @@ final class HomeViewController: UIViewController, BleListener {
         b.setTitle(title, for: .normal)
         b.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
         b.setTitleColor(.white, for: .normal)
-        b.backgroundColor = UIColor(rgb: color)
-        b.layer.cornerRadius = 12
+        b.backgroundColor = UIColor(rgb: color).withAlphaComponent(0.82)
+        b.layer.cornerRadius = 16
+        b.layer.cornerCurve = .continuous
+        b.layer.borderWidth = 1
+        b.layer.borderColor = UIColor(white: 1, alpha: 0.30).cgColor
+        b.clipsToBounds = true
         b.translatesAutoresizingMaskIntoConstraints = false
         b.heightAnchor.constraint(equalToConstant: 52).isActive = true
         b.addTarget(b, action: #selector(MButton.fire), for: .touchUpInside)
@@ -185,8 +187,7 @@ final class HomeViewController: UIViewController, BleListener {
             b.setTitle(name, for: .normal)
             b.titleLabel?.font = UIFont.systemFont(ofSize: 14)
             b.setTitleColor(Theme.textPrimary, for: .normal)
-            b.backgroundColor = Theme.cardInner
-            b.layer.cornerRadius = 12
+            Glass.styleTile(b, radius: 14)
             b.translatesAutoresizingMaskIntoConstraints = false
             b.heightAnchor.constraint(equalToConstant: 46).isActive = true
             b.addTarget(b, action: #selector(MButton.fire), for: .touchUpInside)

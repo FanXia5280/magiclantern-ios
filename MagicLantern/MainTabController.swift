@@ -20,10 +20,21 @@ final class MainTabController: UITabBarController {
 
         viewControllers = [nav(home), nav(light), nav(scene), nav(settings)]
 
-        tabBar.barTintColor = Theme.card
         tabBar.tintColor = Theme.accentText
         tabBar.unselectedItemTintColor = Theme.textSecondary
-        tabBar.isTranslucent = false
+
+        // 液态玻璃标签栏（iOS 15+ 用系统外观 + 磨砂；旧版本用半透明）
+        if #available(iOS 15.0, *) {
+            let ap = UITabBarAppearance()
+            ap.configureWithDefaultBackground()
+            ap.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            ap.backgroundColor = UIColor(white: 0.04, alpha: 0.35)
+            tabBar.standardAppearance = ap
+            tabBar.scrollEdgeAppearance = ap
+        } else {
+            tabBar.barTintColor = .clear
+            tabBar.isTranslucent = true
+        }
 
         // 启动蓝牙
         BleController.shared.start()
@@ -39,10 +50,24 @@ final class MainTabController: UITabBarController {
 
     private func nav(_ root: UIViewController) -> UINavigationController {
         let n = UINavigationController(rootViewController: root)
-        n.navigationBar.barTintColor = Theme.bg
         n.navigationBar.tintColor = Theme.accentText
-        n.navigationBar.isTranslucent = false
-        n.navigationBar.titleTextAttributes = [.foregroundColor: Theme.textPrimary]
+
+        // 液态玻璃导航栏
+        if #available(iOS 15.0, *) {
+            let ap = UINavigationBarAppearance()
+            ap.configureWithDefaultBackground()
+            ap.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            ap.backgroundColor = UIColor(white: 0.04, alpha: 0.3)
+            ap.titleTextAttributes = [.foregroundColor: Theme.textPrimary]
+            ap.largeTitleTextAttributes = [.foregroundColor: Theme.textPrimary]
+            n.navigationBar.standardAppearance = ap
+            n.navigationBar.scrollEdgeAppearance = ap
+            n.navigationBar.compactAppearance = ap
+        } else {
+            n.navigationBar.barTintColor = Theme.bg
+            n.navigationBar.isTranslucent = true
+            n.navigationBar.titleTextAttributes = [.foregroundColor: Theme.textPrimary]
+        }
         return n
     }
 }
