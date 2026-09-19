@@ -21,9 +21,20 @@ final class GradientDot: UIView {
     }
 
     func setColors(_ colors: [Int]) {
-        let list = colors.isEmpty ? [0x2F6BFF, 0x7B5CFF] : colors
+        var list = colors.isEmpty ? [0x2F6BFF, 0x7B5CFF] : colors
+        // 渐变层至少需要两个色标，单色效果补一个同色暗调，否则不渲染
+        if list.count == 1 {
+            list.append(GradientDot.shade(list[0]))
+        }
         gradient.colors = list.map { UIColor(rgb: $0).cgColor }
         setNeedsLayout()
+    }
+
+    private static func shade(_ rgb: Int) -> Int {
+        let r = Int(Double((rgb >> 16) & 0xFF) * 0.45)
+        let g = Int(Double((rgb >> 8) & 0xFF) * 0.45)
+        let b = Int(Double(rgb & 0xFF) * 0.45)
+        return (r << 16) | (g << 8) | b
     }
 
     override func layoutSubviews() {

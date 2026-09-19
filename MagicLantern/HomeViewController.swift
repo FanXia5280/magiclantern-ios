@@ -257,7 +257,6 @@ final class HomeViewController: UIViewController, BleListener {
         let next = !Prefs.shared.powerOn
         LedOutput.power(next)
         refreshState()
-        Ui.toast(next ? "已开灯" : "已关灯")
     }
 
     @objc private func openDevices() {

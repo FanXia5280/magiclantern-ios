@@ -64,13 +64,16 @@ enum LedOutput {
         p.powerOn = on
         let ble = BleController.shared
         if on {
+            // 颜色命令是已验证有效的，用它确保灯真的亮起来
             ble.send(LedCommand.lightOn(true))
             ble.send(LedCommand.brightness(p.brightness))
             ble.send(LedCommand.color((p.color >> 16) & 0xFF, (p.color >> 8) & 0xFF, p.color & 0xFF))
         } else {
+            // 关灯：黑色（已验证有效的颜色命令）+ 亮度 0 + 总开关，三重保险
+            ble.send(LedCommand.color(0, 0, 0))
             ble.send(LedCommand.lightOn(false))
-            ble.send(LedCommand.rgbwStatus(false, false, 0, 0))
             ble.send(LedCommand.brightness(0))
+            ble.send(LedCommand.rgbwStatus(false, false, 0, 0))
         }
     }
 
