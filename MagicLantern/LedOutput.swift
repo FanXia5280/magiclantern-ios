@@ -58,23 +58,13 @@ enum LedOutput {
     }
 
     /// 开 / 关灯
+    ///
+    /// 逆向原版确认：开关只发这一条命令（7E 04 04 v 00 v FF 00 EF），
+    /// 不跟任何其它命令。多发"黑色 / 亮度0 / 通道关"反而会把关灯状态顶回来。
     static func power(_ on: Bool) {
         GradientPlayer.shared.stop()
-        let p = Prefs.shared
-        p.powerOn = on
-        let ble = BleController.shared
-        if on {
-            // 颜色命令是已验证有效的，用它确保灯真的亮起来
-            ble.send(LedCommand.lightOn(true))
-            ble.send(LedCommand.brightness(p.brightness))
-            ble.send(LedCommand.color((p.color >> 16) & 0xFF, (p.color >> 8) & 0xFF, p.color & 0xFF))
-        } else {
-            // 关灯：黑色（已验证有效的颜色命令）+ 亮度 0 + 总开关，三重保险
-            ble.send(LedCommand.color(0, 0, 0))
-            ble.send(LedCommand.lightOn(false))
-            ble.send(LedCommand.brightness(0))
-            ble.send(LedCommand.rgbwStatus(false, false, 0, 0))
-        }
+        Prefs.shared.powerOn = on
+        BleController.shared.send(LedCommand.lightOn(on))
     }
 
     static func sendPinSequence() {
