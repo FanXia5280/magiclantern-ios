@@ -155,31 +155,90 @@ final class BleController: NSObject {
         return d
     }
 
-    // ---------------- 发送 ----------------
+    // ---------------- 发送（串行队列，保证顺序与可靠性）----------------
+
+    private struct PendingWrite {
+        let data: Data
+        let device: BleDevice
+    }
+
+    private var pending: [PendingWrite] = []
+    private var writeBusy = false
+    private var writeTimeoutTask: DispatchWorkItem?
 
     func send(_ data: Data) {
         for d in connected {
-            write(data, to: d)
+            enqueue(data, to: d)
         }
     }
 
     func send(_ data: Data, to device: BleDevice) {
-        write(data, to: device)
+        enqueue(data, to: device)
     }
 
-    private func write(_ data: Data, to device: BleDevice) {
-        guard let chr = device.writeChar else { return }
-        guard device.peripheral.state == .connected else { return }
-        let type: CBCharacteristicWriteType = chr.properties.contains(.writeWithoutResponse)
-            ? .withoutResponse : .withResponse
-        device.peripheral.writeValue(data, for: chr, type: type)
+    private func enqueue(_ data: Data, to device: BleDevice) {
+        DispatchQueue.main.async {
+            self.pending.append(PendingWrite(data: data, device: device))
+            self.pumpWrite()
+        }
+    }
+
+    /// 逐条串行下发。
+    ///
+    /// 两个要点：
+    /// 1. 优先"有响应写"（.withResponse）——原版 Android 用的是默认的
+    ///    WRITE_TYPE_DEFAULT（有响应），有链路层确认和重传；
+    ///    之前用 withoutResponse 时命令没有确认，设备偶尔会把状态丢掉，
+    ///    表现就是开关按下去"亮一下又跳回去"。
+    /// 2. 有响应写同一特征同时只允许一个未完成请求，所以必须排队等回调；
+    ///    无响应写没有回调，用一个很短的间隔放行，避免打爆链路缓冲导致丢包。
+    private func pumpWrite() {
+        guard !writeBusy, !pending.isEmpty else { return }
+        let item = pending.removeFirst()
+        guard let chr = item.device.writeChar,
+              item.device.peripheral.state == .connected else {
+            pumpWrite()
+            return
+        }
+        writeBusy = true
+        let type: CBCharacteristicWriteType = chr.properties.contains(.write)
+            ? .withResponse : .withoutResponse
+        item.device.peripheral.writeValue(item.data, for: chr, type: type)
+        if type == .withoutResponse {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                self.writeBusy = false
+                self.pumpWrite()
+            }
+        } else {
+            // 有响应写正常会在 didWriteValueFor 回调里放行；
+            // 万一回调丢失（链路异常/对端无响应），1.5s 超时兜底，避免队列卡死
+            writeTimeoutTask?.cancel()
+            let task = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                self.writeBusy = false
+                self.pumpWrite()
+            }
+            writeTimeoutTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: task)
+        }
     }
 
     /// 连接建立后的初始化（与 Android 版一致）
+    ///
+    /// 关键：关灯状态下只补一条"关灯"，绝不补发亮度/颜色 ——
+    /// 否则刚关掉的灯会被自己的初始化重新点亮（"黑一下又亮"）。
     private func initialize(_ device: BleDevice) {
         let p = Prefs.shared
+
+        if !p.powerOn {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.send(LedCommand.lightOn(false), to: device)
+            }
+            return
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            self.send(LedCommand.lightOn(p.powerOn), to: device)
+            self.send(LedCommand.lightOn(true), to: device)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             self.send(LedCommand.brightness(p.brightness), to: device)
@@ -262,6 +321,14 @@ extension BleController: CBCentralManagerDelegate {
         d.writeChar = nil
         connected.removeAll { $0.identifier == d.identifier }
         DispatchQueue.main.async {
+            // 清掉该设备排队的命令，避免断开后队列空转
+            self.pending.removeAll { $0.device.identifier == d.identifier }
+            if self.connected.isEmpty {
+                self.pending.removeAll()
+                self.writeBusy = false
+                self.writeTimeoutTask?.cancel()
+                self.writeTimeoutTask = nil
+            }
             self.notifyState(d)
             self.notifyMessage("\(d.name) 已断开")
         }
@@ -310,6 +377,18 @@ extension BleController: CBPeripheralDelegate {
                 self.notifyState(dev)
                 self.notifyMessage("已连接 \(dev.name)")
             }
+        }
+    }
+
+    /// 有响应写完成 → 放行队列里的下一条
+    func peripheral(_ peripheral: CBPeripheral,
+                    didWriteValueFor characteristic: CBCharacteristic,
+                    error: Error?) {
+        DispatchQueue.main.async {
+            self.writeTimeoutTask?.cancel()
+            self.writeTimeoutTask = nil
+            self.writeBusy = false
+            self.pumpWrite()
         }
     }
 }
