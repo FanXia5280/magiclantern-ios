@@ -1,33 +1,54 @@
 import UIKit
 
-/// 效果卡片：液态玻璃底 + 小渐变色点 + 名称（不用整块彩色底，避免花哨）
+/// 小渐变色点（自己管理渐变图层尺寸，避免父视图布局时机的坑）
+final class GradientDot: UIView {
+
+    private let gradient = CAGradientLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        layer.cornerRadius = 5
+        layer.cornerCurve = .continuous
+        layer.masksToBounds = true
+        gradient.startPoint = CGPoint(x: 0, y: 0.5)
+        gradient.endPoint = CGPoint(x: 1, y: 0.5)
+        layer.addSublayer(gradient)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setColors(_ colors: [Int]) {
+        let list = colors.isEmpty ? [0x2F6BFF, 0x7B5CFF] : colors
+        gradient.colors = list.map { UIColor(rgb: $0).cgColor }
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        gradient.frame = bounds
+    }
+}
+
+/// 效果卡片：液态玻璃底 + 小渐变色点 + 名称
 final class GradientCell: UIView {
 
-    private let dot = UIView()
-    private let dotLayer = CAGradientLayer()
     private let titleLabel = UILabel()
     var onTap: (() -> Void)?
     var onLongPress: (() -> Void)?
 
-    private var colors: [Int]
-
     init(colors: [Int], text: String) {
-        self.colors = colors.isEmpty ? [0x2F6BFF, 0x7B5CFF] : colors
         super.init(frame: .zero)
 
         // 液态玻璃底
         Glass.styleTile(self, radius: 16)
 
-        // 小渐变色点：保留颜色辨识，又不抢眼
-        dot.isUserInteractionEnabled = false
+        // 小渐变色点
+        let dot = GradientDot()
+        dot.setColors(colors)
         dot.translatesAutoresizingMaskIntoConstraints = false
-        dot.layer.cornerRadius = 5
-        dot.layer.cornerCurve = .continuous
-        dot.clipsToBounds = true
-        dotLayer.startPoint = CGPoint(x: 0, y: 0.5)
-        dotLayer.endPoint = CGPoint(x: 1, y: 0.5)
-        dotLayer.colors = self.colors.map { UIColor(rgb: $0).cgColor }
-        dot.layer.addSublayer(dotLayer)
         dot.widthAnchor.constraint(equalToConstant: 16).isActive = true
         dot.heightAnchor.constraint(equalToConstant: 16).isActive = true
 
@@ -62,11 +83,6 @@ final class GradientCell: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        dotLayer.frame = dot.bounds
-    }
-
     func setSelectedStyle(_ selected: Bool) {
         Glass.styleTile(self, selected: selected, radius: 16)
         titleLabel.textColor = selected ? .white : Theme.textPrimary
@@ -90,7 +106,7 @@ final class SceneViewController: UIViewController, BleListener {
     private var categories: [String] = []
     private var current = 0   // 0=自定义, 1=双色流动, 2..10 = ModeData.groups[0..8]
 
-    private var modeButtons: [UIButton] = []
+    private var modeCells: [GradientCell] = []
     private var flowCells: [Int: GradientCell] = [:]
     private var firmwareCells: [Int: GradientCell] = [:]
     private var customCells: [String: GradientCell] = [:]
@@ -223,7 +239,7 @@ final class SceneViewController: UIViewController, BleListener {
 
     private func rebuild() {
         for v in contentStack.arrangedSubviews { v.removeFromSuperview() }
-        modeButtons.removeAll()
+        modeCells.removeAll()
         flowCells.removeAll()
         firmwareCells.removeAll()
         customCells.removeAll()
@@ -264,53 +280,42 @@ final class SceneViewController: UIViewController, BleListener {
         return l
     }
 
-    // ---- 9 类固件模式 ----
+    // ---- 9 类固件模式（玻璃卡 + 色点，和其它分类统一）----
     private func buildModes(group: Int) {
         let names = ModeData.names[group]
         let cmds = ModeData.cmds[group]
         var cells: [UIView] = []
         for i in 0..<names.count {
             let cmd = cmds[i]
-            let b = MButton(type: .system)
-            b.tag = i
-            b.setTitle(names[i], for: .normal)
-            b.titleLabel?.font = UIFont.systemFont(ofSize: 13)
-            b.titleLabel?.numberOfLines = 2
-            b.setTitleColor(Theme.textPrimary, for: .normal)
-            Glass.styleTile(b)
-            b.translatesAutoresizingMaskIntoConstraints = false
-            b.heightAnchor.constraint(equalToConstant: 52).isActive = true
-            b.action = { [weak self] in
+            let name = names[i]
+            let cell = GradientCell(colors: ModeColor.colors(forName: name), text: name)
+            cell.onTap = { [weak self] in
                 guard let self = self else { return }
                 LedOutput.sendMode(group: group, value: cmd, speed: Prefs.shared.speed)
                 self.highlightMode(i)
-                Ui.toast("已应用：\(names[i])")
+                Ui.toast("已应用：\(name)")
             }
-            b.addTarget(b, action: #selector(MButton.fire), for: .touchUpInside)
-            let lp = UILongPressGestureRecognizer(target: self, action: #selector(modeLongPressed(_:)))
-            b.addGestureRecognizer(lp)
-            modeButtons.append(b)
-            cells.append(b)
+            cell.onLongPress = { [weak self] in
+                self?.modeMenu(group: group, index: i, name: name, cmd: cmd)
+            }
+            modeCells.append(cell)
+            cells.append(cell)
         }
         addGrid(cells, columns: 3)
     }
 
     private func highlightMode(_ index: Int) {
-        for (i, b) in modeButtons.enumerated() {
-            Glass.styleTile(b, selected: i == index)
+        for (i, cell) in modeCells.enumerated() {
+            cell.setSelectedStyle(i == index)
         }
     }
 
-    @objc private func modeLongPressed(_ g: UILongPressGestureRecognizer) {
-        guard g.state == .began, let b = g.view as? UIButton else { return }
-        let group = current - 2
-        guard group >= 0, group < ModeData.cmds.count else { return }
-        let cmd = ModeData.cmds[group][b.tag]
-        let name = ModeData.names[group][b.tag]
+    private func modeMenu(group: Int, index: Int, name: String, cmd: Int) {
         let isFav = Prefs.shared.favModes.contains("\(group),\(cmd)")
         let sheet = UIAlertController(title: name, message: nil, preferredStyle: .actionSheet)
-        sheet.addAction(UIAlertAction(title: "立即应用", style: .default) { _ in
+        sheet.addAction(UIAlertAction(title: "立即应用", style: .default) { [weak self] _ in
             LedOutput.sendMode(group: group, value: cmd, speed: Prefs.shared.speed)
+            self?.highlightMode(index)
         })
         sheet.addAction(UIAlertAction(title: isFav ? "从主页移除" : "添加到主页常用",
                                       style: .default) { _ in
@@ -324,8 +329,8 @@ final class SceneViewController: UIViewController, BleListener {
         })
         sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
         if let pop = sheet.popoverPresentationController {
-            pop.sourceView = b
-            pop.sourceRect = b.bounds
+            pop.sourceView = view
+            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
         }
         present(sheet, animated: true)
     }
