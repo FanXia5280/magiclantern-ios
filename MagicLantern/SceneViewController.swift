@@ -44,17 +44,21 @@ final class GradientDot: UIView {
 }
 
 /// 效果卡片：液态玻璃底 + 小渐变色点 + 名称
+///
+/// 关键：玻璃背景必须 interactive: false。
+/// 交互式玻璃（UIGlassEffect.isInteractive = true）会在内部接管轻点做形变反馈，
+/// 把单击手势吃掉，表现就是"点一下没反应，只能长按弹菜单再点应用"。
 final class GradientCell: UIView {
 
-    private let titleLabel = UILabel()
+    private let nameLabel = UILabel()
     var onTap: (() -> Void)?
     var onLongPress: (() -> Void)?
 
     init(colors: [Int], text: String) {
         super.init(frame: .zero)
 
-        // 液态玻璃底
-        Glass.styleTile(self, radius: 16)
+        // 液态玻璃底（不参与玻璃交互，保证轻点手势可靠触发）
+        Glass.addGlassBackground(self, radius: 16, interactive: false)
 
         // 小渐变色点
         let dot = GradientDot()
@@ -63,17 +67,17 @@ final class GradientCell: UIView {
         dot.widthAnchor.constraint(equalToConstant: 16).isActive = true
         dot.heightAnchor.constraint(equalToConstant: 16).isActive = true
 
-        titleLabel.text = text
-        titleLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        titleLabel.textColor = Theme.textPrimary
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 2
+        nameLabel.text = text
+        nameLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
+        nameLabel.textColor = Theme.textPrimary
+        nameLabel.textAlignment = .center
+        nameLabel.numberOfLines = 2
 
         let stack = Ui.hStack(7)
         stack.isUserInteractionEnabled = false
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.addArrangedSubview(dot)
-        stack.addArrangedSubview(titleLabel)
+        stack.addArrangedSubview(nameLabel)
         addSubview(stack)
 
         NSLayoutConstraint.activate([
@@ -83,8 +87,19 @@ final class GradientCell: UIView {
             stack.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -8)
         ])
 
-        addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
-        addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPressed)))
+        // 单点 = 立即应用（手势参数加固，避免被其它识别器/手势延迟或取消）
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+        tap.cancelsTouchesInView = false
+        tap.delaysTouchesBegan = false
+        tap.delaysTouchesEnded = false
+        addGestureRecognizer(tap)
+
+        // 长按 = 弹出菜单（不消费触摸，二者互不干扰）
+        let lp = UILongPressGestureRecognizer(target: self, action: #selector(longPressed(_:)))
+        lp.minimumPressDuration = 0.45
+        lp.cancelsTouchesInView = false
+        lp.delaysTouchesBegan = false
+        addGestureRecognizer(lp)
 
         translatesAutoresizingMaskIntoConstraints = false
         heightAnchor.constraint(equalToConstant: 52).isActive = true
@@ -95,8 +110,11 @@ final class GradientCell: UIView {
     }
 
     func setSelectedStyle(_ selected: Bool) {
-        Glass.styleTile(self, selected: selected, radius: 16)
-        titleLabel.textColor = selected ? .white : Theme.textPrimary
+        Glass.addGlassBackground(self, radius: 16, interactive: false,
+                                 tint: selected ? Theme.accent : nil)
+        nameLabel.textColor = selected ? .white : Theme.textPrimary
+        layer.borderWidth = selected ? 1.5 : 0
+        layer.borderColor = selected ? Theme.accent.cgColor : UIColor.clear.cgColor
     }
 
     @objc private func tapped() { onTap?() }
@@ -116,6 +134,8 @@ final class SceneViewController: UIViewController, BleListener {
     private let searchBar = UISearchBar()
     /// 搜索关键词（非空时内容区显示跨分类搜索结果）
     private var keyword = ""
+    /// 内容滚动视图（滚动时自动收起键盘）
+    private var contentScroll: UIScrollView?
 
     private var categories: [String] = []
     private var current = 0   // 0=自定义, 1=双色流动, 2..10 = ModeData.groups[0..8]
@@ -140,6 +160,13 @@ final class SceneViewController: UIViewController, BleListener {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         if current == 0 { rebuild() }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // 离开页面时确保键盘收起，避免键盘"卡"在界面上
+        searchBar.resignFirstResponder()
+        searchBar.setShowsCancelButton(false, animated: false)
     }
 
     private func setupUi() {
@@ -171,6 +198,8 @@ final class SceneViewController: UIViewController, BleListener {
         // 内容
         let scroll = UIScrollView()
         scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.keyboardDismissMode = .onDrag   // 滚动即收键盘，避免"卡键盘"
+        contentScroll = scroll
         view.addSubview(scroll)
         contentStack.axis = .vertical
         contentStack.spacing = 10
@@ -309,7 +338,10 @@ final class SceneViewController: UIViewController, BleListener {
         // 1) 自定义渐变
         for g in Prefs.shared.gradients where g.name.lowercased().contains(key) {
             let cell = GradientCell(colors: [g.color1, g.color2], text: "\(g.name)（自定义）")
-            cell.onTap = { [weak self] in self?.applyGradient(g) }
+            cell.onTap = { [weak self] in
+                self?.searchBar.resignFirstResponder()
+                self?.applyGradient(g)
+            }
             cells.append(cell)
         }
 
@@ -320,6 +352,7 @@ final class SceneViewController: UIViewController, BleListener {
                 let name = group.names[i]
                 let cell = GradientCell(colors: group.colors[i], text: name)
                 cell.onTap = { [weak self] in
+                    self?.searchBar.resignFirstResponder()
                     self?.selectedFlowCmd = cmd
                     LedOutput.sendMode(group: 0, value: cmd, speed: Prefs.shared.speed)
                     Ui.toast("已应用：\(name)（设备端执行，关 App 也生效）")
@@ -337,6 +370,7 @@ final class SceneViewController: UIViewController, BleListener {
                 let name = names[i]
                 let cell = GradientCell(colors: ModeColor.colors(forName: name), text: name)
                 cell.onTap = { [weak self] in
+                    self?.searchBar.resignFirstResponder()
                     LedOutput.sendMode(group: g, value: cmd, speed: Prefs.shared.speed)
                     Ui.toast("已应用：\(name)")
                 }
@@ -576,6 +610,7 @@ final class SceneViewController: UIViewController, BleListener {
     }
 
     private func openEditor(_ origin: Prefs.Gradient?) {
+        searchBar.resignFirstResponder()   // 先收键盘，避免盖住编辑器
         let vc = GradientEditorViewController()
         vc.origin = origin
         vc.onSaved = { [weak self] oldName, item in
@@ -663,6 +698,15 @@ extension SceneViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         rebuild()
+    }
+
+    /// 聚焦时显示"取消"，方便一键退出搜索 + 收键盘
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+    }
+
+    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(false, animated: true)
     }
 
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
