@@ -67,14 +67,25 @@ final class LightViewController: UIViewController, BleListener {
         preview.layer.cornerRadius = 12
         root.addArrangedSubview(previewCard)
 
-        // ---- 色盘 ----
+        // ---- 色盘（用液态玻璃包裹，不再是孤零零一块）----
+        let wheelCard = GlassCard(radius: 30)
+        wheelCard.showShine(true)
+        let wheelInner = Ui.vStack(14)
+        wheelInner.translatesAutoresizingMaskIntoConstraints = false
+        wheelCard.addSubview(wheelInner)
+        NSLayoutConstraint.activate([
+            wheelInner.topAnchor.constraint(equalTo: wheelCard.topAnchor, constant: 18),
+            wheelInner.leftAnchor.constraint(equalTo: wheelCard.leftAnchor, constant: 18),
+            wheelInner.rightAnchor.constraint(equalTo: wheelCard.rightAnchor, constant: -18),
+            wheelInner.bottomAnchor.constraint(equalTo: wheelCard.bottomAnchor, constant: -18)
+        ])
         wheel.translatesAutoresizingMaskIntoConstraints = false
         wheel.heightAnchor.constraint(equalTo: wheel.widthAnchor).isActive = true
-        root.addArrangedSubview(wheel)
-
+        wheelInner.addArrangedSubview(wheel)
         hueBar.translatesAutoresizingMaskIntoConstraints = false
-        hueBar.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        root.addArrangedSubview(hueBar)
+        hueBar.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        wheelInner.addArrangedSubview(hueBar)
+        root.addArrangedSubview(wheelCard)
 
         // ---- 亮度 ----
         let brightCard = Ui.card()
@@ -157,7 +168,7 @@ final class LightViewController: UIViewController, BleListener {
                 sw.layer.cornerRadius = 10
                 sw.layer.cornerCurve = .continuous
                 sw.layer.borderWidth = 1
-                sw.layer.borderColor = UIColor(white: 1, alpha: 0.28).cgColor
+                sw.layer.borderColor = UIColor.hairline.cgColor
                 sw.translatesAutoresizingMaskIntoConstraints = false
                 sw.heightAnchor.constraint(equalToConstant: 34).isActive = true
                 sw.tag = custom ? idx : -1

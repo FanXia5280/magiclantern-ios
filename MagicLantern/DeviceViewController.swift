@@ -40,7 +40,7 @@ final class DeviceViewController: UIViewController, BleListener, UITableViewData
 
         table.translatesAutoresizingMaskIntoConstraints = false
         table.backgroundColor = .clear
-        table.separatorColor = UIColor(white: 1, alpha: 0.08)
+        table.separatorColor = .hairline
         table.dataSource = self
         table.delegate = self
         table.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
@@ -113,7 +113,7 @@ final class DeviceViewController: UIViewController, BleListener, UITableViewData
             cell.accessoryView = Ui.label("点击连接", size: 13, color: Theme.textThird)
         }
         let bg = UIView()
-        bg.backgroundColor = UIColor(white: 1, alpha: 0.05)
+        bg.backgroundColor = .subtleFill
         cell.selectedBackgroundView = bg
         return cell
     }

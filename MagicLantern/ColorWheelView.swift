@@ -30,7 +30,8 @@ final class ColorWheelView: UIView {
     }
 
     private func setup() {
-        layer.cornerRadius = 14
+        layer.cornerRadius = 18
+        layer.cornerCurve = .continuous
         layer.masksToBounds = true
 
         baseLayer.startPoint = CGPoint(x: 0, y: 0.5)

@@ -48,57 +48,11 @@ final class GlassCard: UIView {
     }
 }
 
-/// 背景：深色底 + 柔和光晕（给玻璃提供层次，克制不抢戏）
-final class AuroraBackground: UIView {
-
-    private let blobA = UIView()
-    private let blobB = UIView()
-    private let blobC = UIView()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = UIColor(argb: 0xFF05060A)
-        isUserInteractionEnabled = false
-
-        blobA.backgroundColor = UIColor(argb: 0x333B5BFF)   // 蓝
-        blobB.backgroundColor = UIColor(argb: 0x2A6B4BFF)   // 紫
-        blobC.backgroundColor = UIColor(argb: 0x1F2FBFDF)   // 青
-
-        for b in [blobA, blobB, blobC] {
-            b.isUserInteractionEnabled = false
-            addSubview(b)
-        }
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let w = bounds.width
-        let h = bounds.height
-        circle(blobA, -w * 0.30, -h * 0.12, w * 1.00)
-        circle(blobB, w * 0.50, h * 0.48, w * 1.05)
-        circle(blobC, -w * 0.05, h * 0.72, w * 0.8)
-    }
-
-    private func circle(_ v: UIView, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat) {
-        v.frame = CGRect(x: x, y: y, width: size, height: size)
-        v.layer.cornerRadius = size / 2
-        v.layer.masksToBounds = true
-    }
-}
-
 extension UIViewController {
 
-    /// 给页面铺上深色 + 光晕背景
+    /// 纯色背景（自动跟随浅色 / 深色模式）
     func applyGlassBackground() {
-        view.backgroundColor = UIColor(argb: 0xFF05060A)
-        let bg = AuroraBackground()
-        bg.frame = view.bounds
-        bg.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.insertSubview(bg, at: 0)
+        view.backgroundColor = Theme.bg
     }
 }
 

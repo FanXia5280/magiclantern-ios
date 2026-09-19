@@ -95,14 +95,25 @@ final class GradientEditorViewController: UIViewController {
         root.addArrangedSubview(swatchRow)
         root.addArrangedSubview(hintLabel)
 
-        // 色盘
+        // 色盘（液态玻璃包裹）
+        let wheelCard = GlassCard(radius: 30)
+        wheelCard.showShine(true)
+        let wheelInner = Ui.vStack(14)
+        wheelInner.translatesAutoresizingMaskIntoConstraints = false
+        wheelCard.addSubview(wheelInner)
+        NSLayoutConstraint.activate([
+            wheelInner.topAnchor.constraint(equalTo: wheelCard.topAnchor, constant: 18),
+            wheelInner.leftAnchor.constraint(equalTo: wheelCard.leftAnchor, constant: 18),
+            wheelInner.rightAnchor.constraint(equalTo: wheelCard.rightAnchor, constant: -18),
+            wheelInner.bottomAnchor.constraint(equalTo: wheelCard.bottomAnchor, constant: -18)
+        ])
         wheel.translatesAutoresizingMaskIntoConstraints = false
         wheel.heightAnchor.constraint(equalTo: wheel.widthAnchor).isActive = true
-        root.addArrangedSubview(wheel)
-
+        wheelInner.addArrangedSubview(wheel)
         hueBar.translatesAutoresizingMaskIntoConstraints = false
-        hueBar.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        root.addArrangedSubview(hueBar)
+        hueBar.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        wheelInner.addArrangedSubview(hueBar)
+        root.addArrangedSubview(wheelCard)
 
         // 速度
         let speedCard = Ui.card()

@@ -132,7 +132,7 @@ final class SettingsViewController: UIViewController, BleListener {
 
     private func divider() -> UIView {
         let v = UIView()
-        v.backgroundColor = UIColor(white: 1, alpha: 0.07)
+        v.backgroundColor = .hairline
         v.translatesAutoresizingMaskIntoConstraints = false
         v.heightAnchor.constraint(equalToConstant: 1).isActive = true
         return v

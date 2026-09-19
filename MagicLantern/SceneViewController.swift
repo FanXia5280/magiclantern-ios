@@ -191,7 +191,7 @@ final class SceneViewController: UIViewController, BleListener {
         for v in categoryStack.arrangedSubviews {
             guard let b = v as? UIButton else { continue }
             let sel = b.tag == current
-            b.setTitleColor(sel ? .white : UIColor(white: 1, alpha: 0.72), for: .normal)
+            b.setTitleColor(sel ? .white : Theme.textSecondary, for: .normal)
             Glass.styleChip(b, selected: sel)
         }
     }

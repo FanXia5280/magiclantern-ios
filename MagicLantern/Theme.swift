@@ -1,22 +1,23 @@
 import UIKit
 
-/// 全局配色（与 Android 版一致：深色卡片 + 蓝紫强调色）
+/// 全局配色：自动跟随 iPhone 的浅色 / 深色模式
 enum Theme {
-    static let bg = UIColor(argb: 0xFF0A0D14)
-    static let card = UIColor(argb: 0xFF141926)
-    static let cardInner = UIColor(argb: 0xFF1E2331)
-    static let stroke = UIColor(white: 1.0, alpha: 0.08)
 
-    static let textPrimary = UIColor.white
-    static let textSecondary = UIColor(argb: 0xFF8A93A6)
-    static let textThird = UIColor(argb: 0xFF5C6577)
+    /// 页面底色
+    static let bg = UIColor.adaptive(light: 0xFFF2F4F8, dark: 0xFF05060A)
+    /// 卡片内的次级填充
+    static let cardInner = UIColor.adaptive(light: 0xFFE9ECF3, dark: 0xFF1E2331)
+
+    static let textPrimary = UIColor.adaptive(light: 0xFF11131A, dark: 0xFFFFFFFF)
+    static let textSecondary = UIColor.adaptive(light: 0xFF5A6273, dark: 0xFF8A93A6)
+    static let textThird = UIColor.adaptive(light: 0xFF9AA2B2, dark: 0xFF5C6577)
 
     static let accent = UIColor(argb: 0xFF4A6CF7)
-    static let accentText = UIColor(argb: 0xFF7B5CFF)
+    static let accentText = UIColor.adaptive(light: 0xFF4436D6, dark: 0xFF8E7CFF)
     static let green = UIColor(argb: 0xFF22C55E)
 
     static let pad: CGFloat = 16
-    static let radius: CGFloat = 14
+    static let radius: CGFloat = 24
 }
 
 extension UIColor {
@@ -32,6 +33,31 @@ extension UIColor {
     /// 0xRRGGBB → UIColor
     convenience init(rgb: Int) {
         self.init(argb: 0xFF000000 | (rgb & 0xFFFFFF))
+    }
+
+    /// 浅色 / 深色两套色值，自动跟随系统
+    static func adaptive(light: Int, dark: Int) -> UIColor {
+        return UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(argb: dark) : UIColor(argb: light)
+        }
+    }
+
+    /// 分隔线 / 细边框（深色下白、浅色下黑）
+    static var hairline: UIColor {
+        return UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.10)
+                : UIColor(white: 0, alpha: 0.08)
+        }
+    }
+
+    /// 轻微填充（未选中态底衬）
+    static var subtleFill: UIColor {
+        return UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.08)
+                : UIColor(white: 0, alpha: 0.05)
+        }
     }
 
     var argbInt: Int {
@@ -86,7 +112,7 @@ enum Ui {
         Glass.styleTile(v, selected: false, radius: radius)
     }
 
-    /// 圆形渐变图标（用纯色圆代替渐变色，风格一致）
+    /// 圆形图标（纯色圆 + 文字/符号）
     static func iconCircle(_ icon: String, color: UIColor, size: CGFloat = 38) -> UIView {
         let v = UIView()
         v.backgroundColor = color
@@ -108,7 +134,7 @@ enum Ui {
     static func chipButton(_ text: String, size: CGFloat = 14) -> UILabel {
         let l = label(text, size: size, color: Theme.textPrimary, bold: true)
         l.textAlignment = .center
-        l.backgroundColor = UIColor(white: 1.0, alpha: 0.06)
+        l.backgroundColor = .subtleFill
         l.layer.cornerRadius = 12
         l.layer.masksToBounds = true
         return l
@@ -133,21 +159,23 @@ enum Ui {
     }
 
     static func toast(_ text: String) {
-        guard let window = UIApplication.shared.windows.first else { return }
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first else { return }
         let l = label(text, size: 14, color: .white)
         l.textAlignment = .center
         l.backgroundColor = UIColor(white: 0.1, alpha: 0.92)
-        l.layer.cornerRadius = 10
+        l.layer.cornerRadius = 14
+        l.layer.cornerCurve = .continuous
         l.layer.masksToBounds = true
         l.alpha = 0
         l.translatesAutoresizingMaskIntoConstraints = false
         window.addSubview(l)
         NSLayoutConstraint.activate([
             l.centerXAnchor.constraint(equalTo: window.centerXAnchor),
-            l.bottomAnchor.constraint(equalTo: window.safeAreaLayoutGuide.bottomAnchor, constant: -90),
-            l.widthAnchor.constraint(lessThanOrEqualTo: window.widthAnchor, constant: -48)
+            l.bottomAnchor.constraint(equalTo: window.safeAreaLayoutGuide.bottomAnchor, constant: -140),
+            l.widthAnchor.constraint(lessThanOrEqualTo: window.widthAnchor, constant: -48),
+            l.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
         ])
-        l.layoutMargins = UIEdgeInsets(top: 12, left: 18, bottom: 12, right: 18)
         UIView.animate(withDuration: 0.2, animations: { l.alpha = 1 }) { _ in
             UIView.animate(withDuration: 0.3, delay: 1.6, options: [], animations: {
                 l.alpha = 0
