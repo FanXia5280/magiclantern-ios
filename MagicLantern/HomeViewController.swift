@@ -164,7 +164,7 @@ final class HomeViewController: UIViewController, BleListener {
         root.addArrangedSubview(deviceCard)
 
         // ---- 常用模式 ----
-        root.addArrangedSubview(Ui.label("常用模式（去场景页长按可添加）", size: 13, color: Theme.textSecondary))
+        root.addArrangedSubview(Ui.label("常用模式（长按可移除 / 重新应用）", size: 13, color: Theme.textSecondary))
         let favCard = Ui.card()
         favStack.translatesAutoresizingMaskIntoConstraints = false
         favCard.addSubview(favStack)
@@ -209,11 +209,15 @@ final class HomeViewController: UIViewController, BleListener {
                 favStack.addArrangedSubview(r)
                 row = r
             }
-            let name = ModeData.name(group: g, cmd: cmd)
+            let name = favName(group: g, cmd: cmd)
             let b = MButton(type: .system)
             b.action = {
                 LedOutput.sendMode(group: g, value: cmd, speed: Prefs.shared.speed)
                 Ui.toast("已应用：\(name)")
+            }
+            // 长按：立即应用 / 从主页移除（不用再跑去场景页）
+            b.longAction = { [weak self] in
+                self?.favMenu(group: g, cmd: cmd, name: name)
             }
             b.setTitle(name, for: .normal)
             b.titleLabel?.font = UIFont.systemFont(ofSize: 14)
@@ -230,6 +234,37 @@ final class HomeViewController: UIViewController, BleListener {
             ghost.heightAnchor.constraint(equalToConstant: 46).isActive = true
             last.addArrangedSubview(ghost)
         }
+    }
+
+    /// 常用模式名（兼容双色流动 / 固件渐变的命令码）
+    private func favName(group: Int, cmd: Int) -> String {
+        let n = ModeData.name(group: group, cmd: cmd)
+        if n != "模式" { return n }
+        for g in FlowData.groups {
+            if let i = g.cmds.firstIndex(of: cmd) { return g.names[i] }
+        }
+        return "模式"
+    }
+
+    /// 主页常用模式长按菜单：立即应用 / 从主页移除
+    private func favMenu(group: Int, cmd: Int, name: String) {
+        let sheet = UIAlertController(title: name, message: "主页常用模式",
+                                      preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "立即应用", style: .default) { _ in
+            LedOutput.sendMode(group: group, value: cmd, speed: Prefs.shared.speed)
+            Ui.toast("已应用：\(name)")
+        })
+        sheet.addAction(UIAlertAction(title: "从主页移除", style: .destructive) { [weak self] _ in
+            Prefs.shared.removeFavMode(group: group, cmd: cmd)
+            self?.refreshFavs()
+            Ui.toast("已移除：\(name)")
+        })
+        sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
+        if let pop = sheet.popoverPresentationController {
+            pop.sourceView = view
+            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+        }
+        present(sheet, animated: true)
     }
 
     private func refreshState() {
@@ -283,7 +318,26 @@ final class HomeViewController: UIViewController, BleListener {
 final class MButton: UIButton {
     var action: (() -> Void)?
 
+    /// 长按动作：赋值后自动挂 0.45 秒长按手势
+    var longAction: (() -> Void)? {
+        didSet { installLongPressIfNeeded() }
+    }
+
+    private var longPressInstalled = false
+
     @objc func fire() {
         action?()
+    }
+
+    private func installLongPressIfNeeded() {
+        guard !longPressInstalled, longAction != nil else { return }
+        longPressInstalled = true
+        let lp = UILongPressGestureRecognizer(target: self, action: #selector(longFired(_:)))
+        lp.minimumPressDuration = 0.45
+        addGestureRecognizer(lp)
+    }
+
+    @objc private func longFired(_ g: UILongPressGestureRecognizer) {
+        if g.state == .began { longAction?() }
     }
 }

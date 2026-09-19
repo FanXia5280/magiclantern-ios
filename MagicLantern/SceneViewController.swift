@@ -113,6 +113,9 @@ final class SceneViewController: UIViewController, BleListener {
     private let contentStack = UIStackView()
     private let speedSlider = UISlider()
     private let speedLabel = Ui.label("60", size: 14, color: Theme.textPrimary, bold: true)
+    private let searchBar = UISearchBar()
+    /// 搜索关键词（非空时内容区显示跨分类搜索结果）
+    private var keyword = ""
 
     private var categories: [String] = []
     private var current = 0   // 0=自定义, 1=双色流动, 2..10 = ModeData.groups[0..8]
@@ -140,6 +143,21 @@ final class SceneViewController: UIViewController, BleListener {
     }
 
     private func setupUi() {
+        // 搜索框（输入即时筛选 / 跨分类搜索）
+        searchBar.delegate = self
+        searchBar.searchBarStyle = .minimal
+        searchBar.placeholder = "搜索模式 / 渐变 / 流水…"
+        searchBar.tintColor = Theme.accent
+        searchBar.translatesAutoresizingMaskIntoConstraints = false
+        if let tf = searchBar.value(forKey: "searchField") as? UITextField {
+            tf.textColor = Theme.textPrimary
+            tf.backgroundColor = UIColor(white: 1, alpha: 0.08)
+            tf.layer.cornerRadius = 12
+            tf.layer.cornerCurve = .continuous
+            tf.clipsToBounds = true
+        }
+        view.addSubview(searchBar)
+
         // 分类条
         categoryScroll.translatesAutoresizingMaskIntoConstraints = false
         categoryScroll.showsHorizontalScrollIndicator = false
@@ -179,10 +197,15 @@ final class SceneViewController: UIViewController, BleListener {
         speedLabel.text = "\(Prefs.shared.speed)"
 
         NSLayoutConstraint.activate([
-            categoryScroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            searchBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            searchBar.leftAnchor.constraint(equalTo: view.leftAnchor, constant: Theme.pad - 8),
+            searchBar.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -(Theme.pad - 8)),
+            searchBar.heightAnchor.constraint(equalToConstant: 48),
+
+            categoryScroll.topAnchor.constraint(equalTo: searchBar.bottomAnchor, constant: 2),
             categoryScroll.leftAnchor.constraint(equalTo: view.leftAnchor),
             categoryScroll.rightAnchor.constraint(equalTo: view.rightAnchor),
-            categoryScroll.heightAnchor.constraint(equalToConstant: 52),
+            categoryScroll.heightAnchor.constraint(equalToConstant: 46),
 
             categoryStack.topAnchor.constraint(equalTo: categoryScroll.topAnchor, constant: 8),
             categoryStack.bottomAnchor.constraint(equalTo: categoryScroll.bottomAnchor, constant: -8),
@@ -243,6 +266,12 @@ final class SceneViewController: UIViewController, BleListener {
     private func selectCategory(_ index: Int) {
         current = index
         refreshChips()
+        // 切分类时退出搜索态，避免搜索结果一直盖着
+        if !keyword.isEmpty {
+            keyword = ""
+            searchBar.text = ""
+            searchBar.resignFirstResponder()
+        }
         rebuild()
     }
 
@@ -255,6 +284,12 @@ final class SceneViewController: UIViewController, BleListener {
         firmwareCells.removeAll()
         customCells.removeAll()
 
+        // 搜索态：跨分类即时筛选
+        if !keyword.isEmpty {
+            buildSearchResults(keyword)
+            return
+        }
+
         if current == 0 {
             buildCustom()
         } else if current == 1 {
@@ -262,6 +297,60 @@ final class SceneViewController: UIViewController, BleListener {
         } else {
             buildModes(group: current - 2)
         }
+    }
+
+    // ---------------- 搜索（即时筛选）----------------
+
+    /// 跨全部分类搜：自定义渐变 + 双色流动/固件渐变 + 9 类固件模式
+    private func buildSearchResults(_ kw: String) {
+        let key = kw.lowercased()
+        var cells: [UIView] = []
+
+        // 1) 自定义渐变
+        for g in Prefs.shared.gradients where g.name.lowercased().contains(key) {
+            let cell = GradientCell(colors: [g.color1, g.color2], text: "\(g.name)（自定义）")
+            cell.onTap = { [weak self] in self?.applyGradient(g) }
+            cells.append(cell)
+        }
+
+        // 2) 双色流动 / 固件渐变（FlowData 全表）
+        for group in FlowData.groups {
+            for i in 0..<group.names.count where group.names[i].lowercased().contains(key) {
+                let cmd = group.cmds[i]
+                let name = group.names[i]
+                let cell = GradientCell(colors: group.colors[i], text: name)
+                cell.onTap = { [weak self] in
+                    self?.selectedFlowCmd = cmd
+                    LedOutput.sendMode(group: 0, value: cmd, speed: Prefs.shared.speed)
+                    Ui.toast("已应用：\(name)（设备端执行，关 App 也生效）")
+                }
+                cells.append(cell)
+            }
+        }
+
+        // 3) 9 类固件模式
+        for g in 0..<ModeData.groups.count {
+            let names = ModeData.names[g]
+            let cmds = ModeData.cmds[g]
+            for i in 0..<names.count where names[i].lowercased().contains(key) {
+                let cmd = cmds[i]
+                let name = names[i]
+                let cell = GradientCell(colors: ModeColor.colors(forName: name), text: name)
+                cell.onTap = { [weak self] in
+                    LedOutput.sendMode(group: g, value: cmd, speed: Prefs.shared.speed)
+                    Ui.toast("已应用：\(name)")
+                }
+                cells.append(cell)
+            }
+        }
+
+        contentStack.addArrangedSubview(sectionTitle("搜索“\(kw)” · \(cells.count) 个结果"))
+        if cells.isEmpty {
+            contentStack.addArrangedSubview(Ui.label("没有找到匹配的模式",
+                                                     size: 13, color: Theme.textThird))
+            return
+        }
+        addGrid(cells, columns: 3)
     }
 
     private func addGrid(_ items: [UIView], columns: Int) {
@@ -362,6 +451,10 @@ final class SceneViewController: UIViewController, BleListener {
                     self.refreshFlowSelection()
                     Ui.toast("已应用：\(group.names[i])（设备端执行，关 App 也生效）")
                 }
+                // 长按：立即应用 / 添加到主页常用
+                cell.onLongPress = { [weak self] in
+                    self?.effectMenu(name: group.names[i], cmd: cmd)
+                }
                 flowCells[cmd] = cell
                 cells.append(cell)
             }
@@ -423,6 +516,10 @@ final class SceneViewController: UIViewController, BleListener {
                 LedOutput.sendMode(group: 0, value: cmd, speed: Prefs.shared.speed)
                 self?.refreshFirmwareSelection(cmd)
                 Ui.toast("固件渐变已下发（设备端执行，关掉 App 也生效）")
+            }
+            // 长按：立即应用 / 添加到主页常用
+            cell.onLongPress = { [weak self] in
+                self?.effectMenu(name: fwNames[i], cmd: cmd)
             }
             firmwareCells[cmd] = cell
             fwCells.append(cell)
@@ -518,9 +615,64 @@ final class SceneViewController: UIViewController, BleListener {
         }
     }
 
+    // ---------------- 设备端效果长按菜单 ----------------
+
+    /// 双色流动 / 固件渐变 长按菜单（设备端执行，关 App 也生效）
+    private func effectMenu(name: String, cmd: Int) {
+        let isFav = Prefs.shared.favModes.contains("0,\(cmd)")
+        let sheet = UIAlertController(title: name, message: "设备端执行，关闭 App 依然生效",
+                                      preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "立即应用", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            self.selectedFlowCmd = cmd
+            LedOutput.sendMode(group: 0, value: cmd, speed: Prefs.shared.speed)
+            self.refreshFlowSelection()
+            self.refreshFirmwareSelection(cmd)
+            Ui.toast("已应用：\(name)")
+        })
+        sheet.addAction(UIAlertAction(title: isFav ? "从主页移除" : "添加到主页常用",
+                                      style: .default) { [weak self] _ in
+            if isFav {
+                Prefs.shared.removeFavMode(group: 0, cmd: cmd)
+                Ui.toast("已从主页移除")
+            } else {
+                Prefs.shared.addFavMode(group: 0, cmd: cmd)
+                Ui.toast("已添加到主页常用")
+            }
+            self?.rebuild()
+        })
+        sheet.addAction(UIAlertAction(title: "取消", style: .cancel))
+        if let pop = sheet.popoverPresentationController {
+            pop.sourceView = view
+            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+        }
+        present(sheet, animated: true)
+    }
+
     // ---------------- BleListener ----------------
 
     func bleDevicesChanged() {}
     func bleStateChanged(_ device: BleDevice?) {}
     func bleMessage(_ text: String) {}
+}
+
+// ---------------- 搜索即时筛选 ----------------
+
+extension SceneViewController: UISearchBarDelegate {
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        rebuild()
+    }
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = ""
+        keyword = ""
+        searchBar.resignFirstResponder()
+        rebuild()
+    }
 }
