@@ -191,12 +191,8 @@ final class SceneViewController: UIViewController, BleListener {
         for v in categoryStack.arrangedSubviews {
             guard let b = v as? UIButton else { continue }
             let sel = b.tag == current
-            b.setTitleColor(sel ? Theme.accentText : Theme.textSecondary, for: .normal)
-            b.backgroundColor = sel ? UIColor(argb: 0x552F6BFF) : UIColor(white: 1, alpha: 0.10)
-            b.layer.cornerCurve = .continuous
-            b.layer.borderWidth = 1
-            b.layer.borderColor = sel ? UIColor(argb: 0xFF6E8CFF).cgColor
-                : UIColor(white: 1, alpha: 0.14).cgColor
+            b.setTitleColor(sel ? .white : UIColor(white: 1, alpha: 0.72), for: .normal)
+            Glass.styleChip(b, selected: sel)
         }
     }
 
@@ -357,12 +353,8 @@ final class SceneViewController: UIViewController, BleListener {
         let add = MButton(type: .system)
         add.setTitle("+ 新建渐变", for: .normal)
         add.titleLabel?.font = UIFont.boldSystemFont(ofSize: 14)
-        add.setTitleColor(Theme.accentText, for: .normal)
-        add.backgroundColor = UIColor(argb: 0x2A4A6CF7)
-        add.layer.cornerRadius = 16
-        add.layer.cornerCurve = .continuous
-        add.layer.borderWidth = 1
-        add.layer.borderColor = UIColor(argb: 0xAA6E8CFF).cgColor
+        add.setTitleColor(.white, for: .normal)
+        Glass.addGlassBackground(add, radius: 18, interactive: true, tint: Theme.accent)
         add.translatesAutoresizingMaskIntoConstraints = false
         add.heightAnchor.constraint(equalToConstant: 52).isActive = true
         add.action = { [weak self] in

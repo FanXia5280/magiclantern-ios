@@ -1,35 +1,28 @@
 import UIKit
 
-/// 液态玻璃卡片：半透明磨砂 + 顶部高光 + 连续圆角 + 描边
-/// （用 UIVisualEffectView 实现，iOS 13 起全版本可用；iOS 26+ 上与系统玻璃语言一致）
+/// 原生液态玻璃卡片（UIKit Liquid Glass：UIGlassEffect，iOS 26+）
 final class GlassCard: UIView {
 
-    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
-    private let shine = CAGradientLayer()
+    private let glass: UIVisualEffectView
 
-    init(radius: CGFloat = 22, strong: Bool = false) {
+    init(radius: CGFloat = 24, interactive: Bool = true, tint: UIColor? = nil) {
+        let effect = UIGlassEffect(style: .regular)
+        effect.isInteractive = interactive
+        effect.tintColor = tint
+        glass = UIVisualEffectView(effect: effect)
         super.init(frame: .zero)
+
         backgroundColor = .clear
         layer.cornerRadius = radius
         layer.cornerCurve = .continuous
         layer.masksToBounds = true
-        layer.borderWidth = 1
-        layer.borderColor = UIColor(white: 1, alpha: strong ? 0.24 : 0.16).cgColor
 
-        blur.effect = UIBlurEffect(style: strong ? .systemThinMaterialDark
-                                                  : .systemUltraThinMaterialDark)
-        blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        addSubview(blur)
-
-        // 玻璃反光：顶部一条柔和白光，向下渐隐
-        shine.colors = [UIColor(white: 1, alpha: 0.12).cgColor,
-                        UIColor(white: 1, alpha: 0.03).cgColor,
-                        UIColor.clear.cgColor]
-        shine.locations = [0, 0.10, 0.42]
-        shine.startPoint = CGPoint(x: 0.5, y: 0)
-        shine.endPoint = CGPoint(x: 0.5, y: 1)
-        shine.isHidden = true
-        layer.addSublayer(shine)
+        glass.isUserInteractionEnabled = false
+        glass.layer.cornerRadius = radius
+        glass.layer.cornerCurve = .continuous
+        glass.clipsToBounds = true
+        glass.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(glass)
     }
 
     required init?(coder: NSCoder) {
@@ -38,23 +31,24 @@ final class GlassCard: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        blur.frame = bounds
-        if !shine.isHidden {
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            shine.frame = bounds
-            CATransaction.commit()
-        }
+        glass.frame = bounds
     }
 
-    /// 显示顶部高光（卡片类用 true 更通透）
+    /// 保持调用兼容（原生玻璃自带光学高光，无需额外绘制）
     func showShine(_ on: Bool) {
-        shine.isHidden = !on
         setNeedsLayout()
+    }
+
+    /// 更新玻璃色调
+    func setTint(_ color: UIColor?) {
+        if let e = glass.effect as? UIGlassEffect {
+            e.tintColor = color
+            glass.effect = e
+        }
     }
 }
 
-/// 背景光斑：深色底 + 几团柔和色晕，让玻璃卡片浮起来有层次
+/// 背景：深色底 + 柔和光晕（给玻璃提供层次，克制不抢戏）
 final class AuroraBackground: UIView {
 
     private let blobA = UIView()
@@ -63,12 +57,12 @@ final class AuroraBackground: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = Theme.bg
+        backgroundColor = UIColor(argb: 0xFF05060A)
         isUserInteractionEnabled = false
 
-        blobA.backgroundColor = UIColor(argb: 0x3D2F6BFF)   // 蓝紫
-        blobB.backgroundColor = UIColor(argb: 0x30B14BFF)   // 紫
-        blobC.backgroundColor = UIColor(argb: 0x22FF3D8A)   // 粉
+        blobA.backgroundColor = UIColor(argb: 0x333B5BFF)   // 蓝
+        blobB.backgroundColor = UIColor(argb: 0x2A6B4BFF)   // 紫
+        blobC.backgroundColor = UIColor(argb: 0x1F2FBFDF)   // 青
 
         for b in [blobA, blobB, blobC] {
             b.isUserInteractionEnabled = false
@@ -84,9 +78,9 @@ final class AuroraBackground: UIView {
         super.layoutSubviews()
         let w = bounds.width
         let h = bounds.height
-        circle(blobA, -w * 0.28, -h * 0.10, w * 0.95)
-        circle(blobB, w * 0.52, h * 0.52, w * 1.0)
-        circle(blobC, w * 0.05, h * 0.72, w * 0.7)
+        circle(blobA, -w * 0.30, -h * 0.12, w * 1.00)
+        circle(blobB, w * 0.50, h * 0.48, w * 1.05)
+        circle(blobC, -w * 0.05, h * 0.72, w * 0.8)
     }
 
     private func circle(_ v: UIView, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat) {
@@ -98,9 +92,9 @@ final class AuroraBackground: UIView {
 
 extension UIViewController {
 
-    /// 给页面铺上"液态玻璃"风格的背景（深色 + 光斑）
+    /// 给页面铺上深色 + 光晕背景
     func applyGlassBackground() {
-        view.backgroundColor = Theme.bg
+        view.backgroundColor = UIColor(argb: 0xFF05060A)
         let bg = AuroraBackground()
         bg.frame = view.bounds
         bg.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -108,34 +102,60 @@ extension UIViewController {
     }
 }
 
+/// 原生液态玻璃样式工具
 enum Glass {
 
-    /// 玻璃按钮样式（半透明 + 高光描边）
-    static func styleButton(_ b: UIButton, radius: CGFloat = 14, accent: Bool = false) {
-        b.layer.cornerRadius = radius
-        b.layer.cornerCurve = .continuous
-        b.layer.borderWidth = 1
-        if accent {
-            b.backgroundColor = UIColor(argb: 0xCC4A6CF7)
-            b.layer.borderColor = UIColor(white: 1, alpha: 0.35).cgColor
-        } else {
-            b.backgroundColor = UIColor(white: 1, alpha: 0.10)
-            b.layer.borderColor = UIColor(white: 1, alpha: 0.16).cgColor
-        }
-        b.clipsToBounds = true
-    }
+    private static let glassTag = 88001
 
-    /// 玻璃小方块（模式按钮等）
-    static func styleTile(_ v: UIView, selected: Bool = false, radius: CGFloat = 14) {
+    /// 给任意视图注入原生液态玻璃背景
+    static func addGlassBackground(_ v: UIView, radius: CGFloat,
+                                   interactive: Bool = true, tint: UIColor? = nil) {
+        v.backgroundColor = .clear
         v.layer.cornerRadius = radius
         v.layer.cornerCurve = .continuous
-        v.layer.borderWidth = selected ? 1.5 : 1
-        if selected {
-            v.backgroundColor = UIColor(argb: 0x552F6BFF)
-            v.layer.borderColor = UIColor(argb: 0xFF6E8CFF).cgColor
-        } else {
-            v.backgroundColor = UIColor(white: 1, alpha: 0.09)
-            v.layer.borderColor = UIColor(white: 1, alpha: 0.15).cgColor
+
+        // 已存在则只更新色调（避免重建导致闪烁）
+        if let old = v.viewWithTag(glassTag) as? UIVisualEffectView {
+            old.frame = v.bounds
+            old.layer.cornerRadius = radius
+            if let e = old.effect as? UIGlassEffect {
+                e.tintColor = tint
+                e.isInteractive = interactive
+                old.effect = e
+            }
+            return
         }
+
+        let effect = UIGlassEffect(style: .regular)
+        effect.isInteractive = interactive
+        effect.tintColor = tint
+
+        let g = UIVisualEffectView(effect: effect)
+        g.tag = glassTag
+        g.isUserInteractionEnabled = false
+        g.frame = v.bounds
+        g.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        g.layer.cornerRadius = radius
+        g.layer.cornerCurve = .continuous
+        g.clipsToBounds = true
+        v.insertSubview(g, at: 0)
+    }
+
+    /// 液态玻璃按钮
+    static func styleButton(_ b: UIButton, radius: CGFloat = 16, accent: Bool = false) {
+        addGlassBackground(b, radius: radius, interactive: true,
+                           tint: accent ? Theme.accent : nil)
+    }
+
+    /// 液态玻璃方块（模式按钮 / 列表项等）
+    static func styleTile(_ v: UIView, selected: Bool = false, radius: CGFloat = 18) {
+        addGlassBackground(v, radius: radius, interactive: true,
+                           tint: selected ? Theme.accent : nil)
+    }
+
+    /// 胶囊（分类切换等）
+    static func styleChip(_ v: UIView, selected: Bool, radius: CGFloat = 17) {
+        addGlassBackground(v, radius: radius, interactive: true,
+                           tint: selected ? Theme.accent : nil)
     }
 }

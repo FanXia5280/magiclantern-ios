@@ -52,7 +52,7 @@ final class LightViewController: UIViewController, BleListener {
         ])
 
         // ---- 颜色预览 ----
-        let previewCard = GlassCard(radius: 16, strong: true)
+        let previewCard = GlassCard(radius: 18)
         previewCard.showShine(true)
         previewCard.translatesAutoresizingMaskIntoConstraints = false
         previewCard.heightAnchor.constraint(equalToConstant: 56).isActive = true

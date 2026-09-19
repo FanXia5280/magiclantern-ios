@@ -1,15 +1,16 @@
 name: MagicLantern
 options:
   bundleIdPrefix: com.magiclantern
+  # 只支持 iOS 27 及以上（原生 Liquid Glass 设计语言）
   deploymentTarget:
-    iOS: "13.0"
+    iOS: "27.0"
   createIntermediateGroups: true
   groupSortPosition: top
 
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    IPHONEOS_DEPLOYMENT_TARGET: "13.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "27.0"
     ENABLE_BITCODE: "NO"
     CODE_SIGNING_ALLOWED: "NO"
     CODE_SIGNING_REQUIRED: "NO"

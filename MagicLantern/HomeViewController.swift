@@ -149,12 +149,7 @@ final class HomeViewController: UIViewController, BleListener {
         b.setTitle(title, for: .normal)
         b.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
         b.setTitleColor(.white, for: .normal)
-        b.backgroundColor = UIColor(rgb: color).withAlphaComponent(0.82)
-        b.layer.cornerRadius = 16
-        b.layer.cornerCurve = .continuous
-        b.layer.borderWidth = 1
-        b.layer.borderColor = UIColor(white: 1, alpha: 0.30).cgColor
-        b.clipsToBounds = true
+        Glass.addGlassBackground(b, radius: 18, interactive: true, tint: UIColor(rgb: color))
         b.translatesAutoresizingMaskIntoConstraints = false
         b.heightAnchor.constraint(equalToConstant: 52).isActive = true
         b.addTarget(b, action: #selector(MButton.fire), for: .touchUpInside)

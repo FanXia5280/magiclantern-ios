@@ -75,14 +75,14 @@ enum Ui {
         return s
     }
 
-    /// 液态玻璃卡片（半透明磨砂 + 高光）
+    /// 原生液态玻璃卡片
     static func card() -> UIView {
-        let c = GlassCard(radius: 22, strong: true)
+        let c = GlassCard(radius: 24)
         c.showShine(true)
         return c
     }
 
-    static func applyCardStyle(_ v: UIView, radius: CGFloat = 22) {
+    static func applyCardStyle(_ v: UIView, radius: CGFloat = 20) {
         Glass.styleTile(v, selected: false, radius: radius)
     }
 

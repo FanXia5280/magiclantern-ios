@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    # macos-15 自带 Xcode 16，能读 XcodeGen 生成的新版工程格式
-    runs-on: macos-15
+    # xcode-27 镜像：macOS 27 + Xcode 27 + iOS 27 SDK（原生 Liquid Glass）
+    runs-on: xcode-27
     timeout-minutes: 40
 
     steps:
