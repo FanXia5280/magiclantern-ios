@@ -17,6 +17,16 @@ final class DeviceViewController: UIViewController, BleListener, UITableViewData
         refreshUi()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // 进来自动开始搜索，省一步操作
+        let ble = BleController.shared
+        if !ble.scanning && ble.connected.isEmpty {
+            ble.startScan()
+            refreshUi()
+        }
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         BleController.shared.stopScan()

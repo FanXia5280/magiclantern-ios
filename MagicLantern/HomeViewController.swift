@@ -95,37 +95,72 @@ final class HomeViewController: UIViewController, BleListener {
 
         root.addArrangedSubview(statusCard)
 
-        // ---- 快捷入口 ----
-        root.addArrangedSubview(Ui.label("快捷功能", size: 13, color: Theme.textSecondary))
-        let quickCard = Ui.card()
-        let quickInner = Ui.vStack(12)
-        quickInner.translatesAutoresizingMaskIntoConstraints = false
-        quickCard.addSubview(quickInner)
+        // ---- 设备管理（一整个玻璃卡包住）----
+        root.addArrangedSubview(Ui.label("设备", size: 13, color: Theme.textSecondary))
+        let deviceCard = Ui.card()
+        let deviceInner = Ui.vStack(14)
+        deviceInner.translatesAutoresizingMaskIntoConstraints = false
+        deviceCard.addSubview(deviceInner)
         NSLayoutConstraint.activate([
-            quickInner.topAnchor.constraint(equalTo: quickCard.topAnchor, constant: 14),
-            quickInner.leftAnchor.constraint(equalTo: quickCard.leftAnchor, constant: 14),
-            quickInner.rightAnchor.constraint(equalTo: quickCard.rightAnchor, constant: -14),
-            quickInner.bottomAnchor.constraint(equalTo: quickCard.bottomAnchor, constant: -14)
+            deviceInner.topAnchor.constraint(equalTo: deviceCard.topAnchor, constant: 16),
+            deviceInner.leftAnchor.constraint(equalTo: deviceCard.leftAnchor, constant: 16),
+            deviceInner.rightAnchor.constraint(equalTo: deviceCard.rightAnchor, constant: -16),
+            deviceInner.bottomAnchor.constraint(equalTo: deviceCard.bottomAnchor, constant: -16)
         ])
-        let row1 = Ui.hStack(10)
-        row1.distribution = .fillEqually
-        row1.addArrangedSubview(quickButton("灯光控制", 0xFF4A6CF7) { [weak self] in
-            self?.tabBarController?.selectedIndex = 1
-        })
-        row1.addArrangedSubview(quickButton("场景模式", 0xFF7B5CFF) { [weak self] in
-            self?.tabBarController?.selectedIndex = 2
-        })
-        quickInner.addArrangedSubview(row1)
-        let row2 = Ui.hStack(10)
-        row2.distribution = .fillEqually
-        row2.addArrangedSubview(quickButton("设备管理", 0xFF22C55E) { [weak self] in
-            self?.openDevices()
-        })
-        row2.addArrangedSubview(quickButton("设置", 0xFFF59E0B) { [weak self] in
-            self?.tabBarController?.selectedIndex = 3
-        })
-        quickInner.addArrangedSubview(row2)
-        root.addArrangedSubview(quickCard)
+
+        // 设备管理入口行
+        let manageRow = MButton(type: .system)
+        manageRow.action = { [weak self] in self?.openDevices() }
+        manageRow.addTarget(manageRow, action: #selector(MButton.fire), for: .touchUpInside)
+        let manageInner = Ui.hStack(12)
+        manageInner.isUserInteractionEnabled = false
+        manageInner.translatesAutoresizingMaskIntoConstraints = false
+        manageRow.addSubview(manageInner)
+
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
+        let icon = UIImageView(image: UIImage(systemName: "dot.radiowaves.left.and.right",
+                                              withConfiguration: symbolConfig))
+        icon.tintColor = .white
+        icon.contentMode = .center
+        icon.backgroundColor = UIColor(argb: 0xFF22C55E)
+        icon.layer.cornerRadius = 20
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        manageInner.addArrangedSubview(icon)
+
+        let textCol = Ui.vStack(3)
+        textCol.addArrangedSubview(Ui.label("设备管理", size: 16, color: Theme.textPrimary, bold: true))
+        textCol.addArrangedSubview(Ui.label("搜索附近的蓝牙灯具并连接", size: 12,
+                                            color: Theme.textSecondary))
+        manageInner.addArrangedSubview(textCol)
+        manageInner.addArrangedSubview(UIView())
+
+        let arrow = UIImageView(image: UIImage(systemName: "chevron.right"))
+        arrow.tintColor = Theme.textThird
+        manageInner.addArrangedSubview(arrow)
+
+        NSLayoutConstraint.activate([
+            manageInner.topAnchor.constraint(equalTo: manageRow.topAnchor, constant: 4),
+            manageInner.leftAnchor.constraint(equalTo: manageRow.leftAnchor),
+            manageInner.rightAnchor.constraint(equalTo: manageRow.rightAnchor),
+            manageInner.bottomAnchor.constraint(equalTo: manageRow.bottomAnchor, constant: -4)
+        ])
+        deviceInner.addArrangedSubview(manageRow)
+
+        // 搜索蓝牙按钮（玻璃）
+        let searchBtn = MButton(type: .system)
+        searchBtn.setTitle("搜索蓝牙设备", for: .normal)
+        searchBtn.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15)
+        searchBtn.setTitleColor(Theme.textPrimary, for: .normal)
+        Glass.styleButton(searchBtn, radius: 14)
+        searchBtn.action = { [weak self] in self?.openDevices() }
+        searchBtn.addTarget(searchBtn, action: #selector(MButton.fire), for: .touchUpInside)
+        searchBtn.translatesAutoresizingMaskIntoConstraints = false
+        searchBtn.heightAnchor.constraint(equalToConstant: 46).isActive = true
+        deviceInner.addArrangedSubview(searchBtn)
+
+        root.addArrangedSubview(deviceCard)
 
         // ---- 常用模式 ----
         root.addArrangedSubview(Ui.label("常用模式（去场景页长按可添加）", size: 13, color: Theme.textSecondary))

@@ -6,7 +6,7 @@ import UIKit
 final class MainTabController: UITabBarController {
 
     private let settingsButton = UIButton(type: .system)
-    private let fabSize: CGFloat = 54
+    private let fabSize: CGFloat = 56
 
     override func viewDidLoad() {
         super.viewDidLoad()
