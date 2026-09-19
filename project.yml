@@ -1,0 +1,45 @@
+name: MagicLantern
+options:
+  bundleIdPrefix: com.magiclantern
+  deploymentTarget:
+    iOS: "13.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "13.0"
+    ENABLE_BITCODE: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+
+targets:
+  MagicLantern:
+    type: application
+    platform: iOS
+    sources:
+      - path: MagicLantern
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.magiclantern.rgb
+        PRODUCT_NAME: MagicLantern
+        INFOPLIST_FILE: MagicLantern/Info.plist
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+
+schemes:
+  MagicLantern:
+    build:
+      targets:
+        MagicLantern: all
+    run:
+      config: Debug
+    archive:
+      config: Release
