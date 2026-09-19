@@ -1,9 +1,10 @@
 import UIKit
 
-/// 渐变色卡（双色 / 多色背景 + 名称，可点击选中）
+/// 效果卡片：液态玻璃底 + 小渐变色点 + 名称（不用整块彩色底，避免花哨）
 final class GradientCell: UIView {
 
-    private let gradient = CAGradientLayer()
+    private let dot = UIView()
+    private let dotLayer = CAGradientLayer()
     private let titleLabel = UILabel()
     var onTap: (() -> Void)?
     var onLongPress: (() -> Void)?
@@ -11,40 +12,47 @@ final class GradientCell: UIView {
     private var colors: [Int]
 
     init(colors: [Int], text: String) {
-        self.colors = colors.isEmpty ? [0x222222, 0x444444] : colors
+        self.colors = colors.isEmpty ? [0x2F6BFF, 0x7B5CFF] : colors
         super.init(frame: .zero)
-        layer.cornerRadius = 16
-        layer.cornerCurve = .continuous
-        layer.masksToBounds = true
-        layer.borderWidth = 1
-        layer.borderColor = UIColor(white: 1, alpha: 0.28).cgColor
 
-        gradient.startPoint = CGPoint(x: 0, y: 0.5)
-        gradient.endPoint = CGPoint(x: 1, y: 0.5)
-        gradient.colors = self.colors.map { UIColor(rgb: $0).cgColor }
-        layer.addSublayer(gradient)
+        // 液态玻璃底
+        Glass.styleTile(self, radius: 16)
+
+        // 小渐变色点：保留颜色辨识，又不抢眼
+        dot.isUserInteractionEnabled = false
+        dot.translatesAutoresizingMaskIntoConstraints = false
+        dot.layer.cornerRadius = 5
+        dot.layer.cornerCurve = .continuous
+        dot.clipsToBounds = true
+        dotLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        dotLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        dotLayer.colors = self.colors.map { UIColor(rgb: $0).cgColor }
+        dot.layer.addSublayer(dotLayer)
+        dot.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        dot.heightAnchor.constraint(equalToConstant: 16).isActive = true
 
         titleLabel.text = text
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 13)
-        titleLabel.textColor = .white
+        titleLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
+        titleLabel.textColor = Theme.textPrimary
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 2
-        titleLabel.layer.shadowColor = UIColor.black.cgColor
-        titleLabel.layer.shadowOpacity = 0.8
-        titleLabel.layer.shadowRadius = 2
-        titleLabel.layer.shadowOffset = CGSize(width: 0, height: 1)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(titleLabel)
+
+        let stack = Ui.hStack(7)
+        stack.isUserInteractionEnabled = false
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(dot)
+        stack.addArrangedSubview(titleLabel)
+        addSubview(stack)
+
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            titleLabel.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 4),
-            titleLabel.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -4)
+            stack.centerXAnchor.constraint(equalTo: centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            stack.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 8),
+            stack.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -8)
         ])
 
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
-        let lp = UILongPressGestureRecognizer(target: self, action: #selector(longPressed))
-        addGestureRecognizer(lp)
+        addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(longPressed)))
 
         translatesAutoresizingMaskIntoConstraints = false
         heightAnchor.constraint(equalToConstant: 52).isActive = true
@@ -56,13 +64,12 @@ final class GradientCell: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        gradient.frame = bounds
+        dotLayer.frame = dot.bounds
     }
 
     func setSelectedStyle(_ selected: Bool) {
-        layer.borderWidth = selected ? 2.5 : 1
-        layer.borderColor = selected ? UIColor.white.cgColor
-            : UIColor(white: 1, alpha: 0.28).cgColor
+        Glass.styleTile(self, selected: selected, radius: 16)
+        titleLabel.textColor = selected ? .white : Theme.textPrimary
     }
 
     @objc private func tapped() { onTap?() }

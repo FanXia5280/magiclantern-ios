@@ -52,19 +52,21 @@ final class LightViewController: UIViewController, BleListener {
         ])
 
         // ---- 颜色预览 ----
-        let previewCard = GlassCard(radius: 18)
+        let previewCard = GlassCard(radius: 22)
         previewCard.showShine(true)
         previewCard.translatesAutoresizingMaskIntoConstraints = false
-        previewCard.heightAnchor.constraint(equalToConstant: 56).isActive = true
+        previewCard.heightAnchor.constraint(equalToConstant: 72).isActive = true
         preview.translatesAutoresizingMaskIntoConstraints = false
         previewCard.addSubview(preview)
+        // 四周留边，让玻璃边框清晰可见
         NSLayoutConstraint.activate([
-            preview.topAnchor.constraint(equalTo: previewCard.topAnchor),
-            preview.leftAnchor.constraint(equalTo: previewCard.leftAnchor),
-            preview.rightAnchor.constraint(equalTo: previewCard.rightAnchor),
-            preview.bottomAnchor.constraint(equalTo: previewCard.bottomAnchor)
+            preview.topAnchor.constraint(equalTo: previewCard.topAnchor, constant: 10),
+            preview.leftAnchor.constraint(equalTo: previewCard.leftAnchor, constant: 10),
+            preview.rightAnchor.constraint(equalTo: previewCard.rightAnchor, constant: -10),
+            preview.bottomAnchor.constraint(equalTo: previewCard.bottomAnchor, constant: -10)
         ])
-        preview.layer.cornerRadius = 12
+        preview.layer.cornerRadius = 14
+        preview.layer.cornerCurve = .continuous
         root.addArrangedSubview(previewCard)
 
         // ---- 色盘（用液态玻璃包裹，不再是孤零零一块）----
