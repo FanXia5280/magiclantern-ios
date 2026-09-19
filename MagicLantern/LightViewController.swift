@@ -66,16 +66,16 @@ final class LightViewController: UIViewController, BleListener {
             preview.bottomAnchor.constraint(equalTo: previewCard.bottomAnchor)
         ])
         preview.layer.cornerRadius = 12
-        root.addView(previewCard)
+        root.addArrangedSubview(previewCard)
 
         // ---- 色盘 ----
         wheel.translatesAutoresizingMaskIntoConstraints = false
         wheel.heightAnchor.constraint(equalTo: wheel.widthAnchor).isActive = true
-        root.addView(wheel)
+        root.addArrangedSubview(wheel)
 
         hueBar.translatesAutoresizingMaskIntoConstraints = false
         hueBar.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        root.addView(hueBar)
+        root.addArrangedSubview(hueBar)
 
         // ---- 亮度 ----
         let brightCard = Ui.card()
@@ -100,7 +100,7 @@ final class LightViewController: UIViewController, BleListener {
         brightnessSlider.addTarget(self, action: #selector(brightnessDone), for: .touchUpInside)
         brightnessSlider.addTarget(self, action: #selector(brightnessDone), for: .touchUpOutside)
         brightStack.addArrangedSubview(brightnessSlider)
-        root.addView(brightCard)
+        root.addArrangedSubview(brightCard)
 
         // ---- 常用色 / 经典色 ----
         let colorCard = Ui.card()
@@ -131,7 +131,7 @@ final class LightViewController: UIViewController, BleListener {
         rgbButton.addTarget(self, action: #selector(openRgbDialog), for: .touchUpInside)
         colorStack.addArrangedSubview(rgbButton)
 
-        root.addView(colorCard)
+        root.addArrangedSubview(colorCard)
 
         // ---- 联动 ----
         wheel.onColorChanged = { [weak self] rgb in

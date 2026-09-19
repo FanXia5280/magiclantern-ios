@@ -29,6 +29,8 @@ jobs:
         run: xcodegen generate
 
       - name: 编译（未签名）
+        id: xcbuild
+        continue-on-error: true
         run: |
           set -o pipefail
           xcodebuild \
@@ -40,9 +42,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee build.log
+
+      - name: 编译错误摘要（失败时显示在日志末尾）
+        if: steps.xcbuild.outcome == 'failure'
+        run: |
+          echo "================ 编译错误摘要 ================"
+          grep -n "error:" build.log | head -60 || echo "（未匹配到 error: 行，请看上面的完整日志）"
+          echo "=============================================="
+          exit 1
 
       - name: 打包成 IPA
+        if: steps.xcbuild.outcome == 'success'
         run: |
           set -e
           rm -rf Payload
@@ -53,6 +64,7 @@ jobs:
           echo "打包完成：MagicLantern-unsigned.ipa"
 
       - name: 上传 IPA（在页面下方 Artifacts 下载）
+        if: steps.xcbuild.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: MagicLantern-ipa
